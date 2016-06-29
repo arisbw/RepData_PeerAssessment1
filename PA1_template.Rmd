@@ -23,7 +23,23 @@ library(ggplot2)
 
 ## Loading and preprocessing the data
 
+As described before, this data generated from a personal activity monitoring device. First of all, we need to load the data.
 
+```{r load_data}
+data <- read.csv("activity.csv",colClasses = c("numeric","character","factor"))
+```
+
+Next, we need to convert the date field to its appropriate format.
+
+```{r tidy_data}
+data$date <- as.Date(data$date, format = "%Y-%m-%d")
+```
+
+Now, we check the data using `str()`
+
+```{r check_data}
+str(data)
+```
 
 ## What is mean total number of steps taken per day?
 
