@@ -1,14 +1,24 @@
----
-title: "Reproducible Research: Peer Assessment 1"
-output: 
-  html_document:
-    keep_md: true
----
+#Reproducible Research: Peer Assesment 1
+###29 June 2016
+
+This document is the results of peer assesment 1 of Reproducible Research on Coursera. This assignment uses data from a personal activity monitoring device. The device collects data at 5 minute intervals through out the day. The data consists of two months of data from an anonymous individual collected during the months of October and November, 2012 and include the number of steps taken in 5 minute intervals each day.
+
+In this assignment, I completed all the assignments in a single R markdown document that can be processed by knitr and be transformed into an HTML file.
+
 ##Prepare the Environment
+
+First of all, I need to make sure that I always include the code that I used to generate the output I present. So, I need to set echo = **TRUE** and results = **hold** as global options for this document.
 
 ```{r set_options}
 library(knitr)
 opts_chunk$set(echo = TRUE, results = 'hold')
+```
+
+After that, I need to load required libraries.
+
+```{r call_libraries}
+library(data.table)
+library(ggplot2)
 ```
 
 ## Loading and preprocessing the data
