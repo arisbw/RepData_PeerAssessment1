@@ -11,7 +11,7 @@ First of all, I need to make sure that I always include the code that I used to 
 
 ```{r set_options}
 library(knitr)
-opts_chunk$set(echo = TRUE, results = 'hold')
+opts_chunk$set(echo = TRUE, results = 'hold',root.dir='D:/GitHub/RepData_PeerAssessment1/', fig.path = 'figure/')
 ```
 
 After that, I need to load required libraries.
