@@ -1,5 +1,5 @@
 #Reproducible Research: Peer Assesment 1
-###29 June 2016
+###3 July 2016
 
 This document is the results of peer assesment 1 of Reproducible Research on Coursera. This assignment uses data from a personal activity monitoring device. The device collects data at 5 minute intervals through out the day. The data consists of two months of data from an anonymous individual collected during the months of October and November, 2012 and include the number of steps taken in 5 minute intervals each day.
 
@@ -43,14 +43,170 @@ str(data)
 
 ## What is mean total number of steps taken per day?
 
+For this section, we ignore the missing values to calculate the total steps per day.
 
+```{r calc_steps}
+steps_per_day <- aggregate(steps ~ date, data, sum)
+colnames(steps_per_day) <- c("date","steps")
+head(steps_per_day)
+```
+
+After that, we will make a histogram of the total number of step taken each day.
+```{r hist_steps}
+ggplot(steps_per_day, aes(x = steps)) + 
+       geom_histogram(fill = "green", binwidth = 1000) + 
+        labs(title="Histogram of Steps Taken per Day", 
+             x = "Number of Steps per Day", y = "Number of times in a day(Count)") + theme_bw()
+```
+
+Last, we will calculate the mean and median of the total number of steps taken per day.
+
+```{r calc_mean_median}
+steps_mean <- mean(steps_per_day$steps, na.rm = T)
+steps_median <- median(steps_per_day$steps, na.rm = T)
+cat("Mean steps:",steps_mean,"")
+cat("Median steps:", steps_median)
+```
 
 ## What is the average daily activity pattern?
 
+We will see the average daily activity pattern on the 5-minute interval. In order to do that, we need to make a new dataset which can follows our needs.
 
+```{r data_avg_int}
+steps_per_interval <- aggregate(data$steps,
+                                by = list(interval = data$interval),
+                                FUN=mean, na.rm=T)
+#convert interval data to numeric
+steps_per_interval$interval <- as.numeric(as.vector(steps_per_interval$interval))
+colnames(steps_per_interval) <- c("interval","steps")
+```
+
+After that, we will make the plot with the time series of the 5-minute interval on x-axis and the average number of steps taken (averaged across all days) on y-axis using our new data.
+
+```{r plot_timeseries}
+ggplot(steps_per_interval, aes(x=interval, y=steps)) +   
+        geom_line(color="orange", size=1) +  
+        labs(title="Average Daily Activity Pattern", x="Interval", y="Number of steps") +  
+        theme_bw()
+```
+
+After that, we want to know which 5-minute interval, on average across all days in the dataset, contains the maximum number of steps.
+
+```{r max_steps}
+max_interval <- steps_per_interval[which.max(  
+        steps_per_interval$steps),]
+cat("Which interval?", max_interval$interval,"")
+cat("Maximum steps:", max_interval$steps)
+```
 
 ## Imputing missing values
 
+In order to impute missing values, we must know that is there any missing value in our data. So we need to calculate the total number of missing values in the dataset.
 
+```{r check_miss}
+miss_vals <- sum(is.na(data$steps))
+cat("Missing values:", miss_vals)
+```
+
+After we know how many missing values in our data, we now need to create  a strategy to fill all the missing values. We now will create a function `na_fill(data,  pervalue)` which data argument is the initial data that we use right now and per value is the argument for `steps_per_interval` dataset.
+
+```{r fill_data}
+na_fill <- function(data, pervalue) {
+        na_index <- which(is.na(data$steps))
+        na_replace <- unlist(lapply(na_index, FUN=function(idx){
+                interval = data[idx,]$interval
+                pervalue[pervalue$interval == interval,]$steps
+        }))
+        fill_steps <- data$steps
+        fill_steps[na_index] <- na_replace
+        fill_steps
+}
+
+data_fill <- data.frame(  
+        steps = na_fill(data, steps_per_interval),  
+        date = data$date,  
+        interval = data$interval)
+str(data_fill)
+```
+
+Now, let's create a histogram of the total number of steps taken each day with  interval of 1000 steps, with the imputed data.
+
+```{r hist_imputed}
+fill_steps_per_day <- aggregate(steps ~ date, data_fill, sum)
+colnames(fill_steps_per_day) <- c("date","steps")
+
+##plotting the histogram
+ggplot(fill_steps_per_day, aes(x = steps)) + 
+       geom_histogram(fill = "blue", binwidth = 1000) + 
+        labs(title="Histogram of Steps Taken per Day", 
+             x = "Number of Steps per Day", y = "Number of times in a day(Count)") + theme_bw() 
+```
+
+Next, we need to calculate mean and median of total number of steps taken per day.
+
+```{r mean_median_imputed}
+steps_mean_new <- mean(fill_steps_per_day$steps, na.rm = T)
+steps_median_new <- median(fill_steps_per_day$steps, na.rm = T)
+cat("Mean steps (after imputation):",steps_mean_new,"")
+cat("Median steps (after imputation):",steps_median_new)
+```
+
+Do these values differ from the estimates from the first part of the assignment?
+
+```{r any_diff}
+diff_mean <- abs(steps_mean - steps_mean_new)
+diff_median <- abs(steps_median - steps_median_new)
+cat("Difference in mean:",diff_mean,"")
+cat("Difference in median:",diff_median)
+```
+
+We can say that mean and median between two data is quite similar.
+
+The impact of imputing missing data on the estimates of the total daily number of steps is that it changes our mean and median quite a bit. Another change is that, when you compare two histogram before and after imputation, the maximum value of the data is increased. But, the change is not affect negatively to our prediction.
 
 ## Are there differences in activity patterns between weekdays and weekends?
+
+First of all we need to create weekdays activity dataset.
+
+```{r weekdays_dataset}
+weekdays_steps <- function(data) {
+    weekdays_steps <- aggregate(data$steps, by=list(interval = data$interval),
+                          FUN=mean, na.rm=T)
+    # convert to integers for plotting
+    weekdays_steps$interval <- 
+            as.integer(levels(weekdays_steps$interval)[weekdays_steps$interval])
+    colnames(weekdays_steps) <- c("interval", "steps")
+    weekdays_steps
+}
+
+data_by_weekdays <- function(data) {
+    data$weekday <- 
+            as.factor(weekdays(data$date)) # weekdays
+    weekend_data <- subset(data, weekday %in% c("Saturday","Sunday"))
+    weekday_data <- subset(data, !weekday %in% c("Saturday","Sunday"))
+
+    weekend_steps <- weekdays_steps(weekend_data)
+    weekday_steps <- weekdays_steps(weekday_data)
+
+    weekend_steps$dayofweek <- rep("weekend", nrow(weekend_steps))
+    weekday_steps$dayofweek <- rep("weekday", nrow(weekday_steps))
+
+    data_by_weekdays <- rbind(weekend_steps, weekday_steps)
+    data_by_weekdays$dayofweek <- as.factor(data_by_weekdays$dayofweek)
+    data_by_weekdays
+}
+
+data_weekdays <- data_by_weekdays(data_fill)
+```
+
+After that, we compare the plot of weekdays and weekends activity per 5-minute interval.
+
+```{r plot_weekdays_weekend}
+ggplot(data_weekdays, aes(x=interval, y=steps)) + 
+        geom_line(color="violet") + 
+        facet_wrap(~ dayofweek, nrow=2, ncol=1) +
+        labs(x="Interval", y="Number of steps") +
+        theme_bw()
+```
+
+As we can see, from weekday activity plot, there is a big peak in the beginning and then goes down and with several peak. From weekend activity plot, it has more peaks than weekday activity. The difference we see maybe because activities that user do in weekday (doing some working routine) and weekend (relatively free so the user can do some workout almost in a full day).
